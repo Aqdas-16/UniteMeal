@@ -1,0 +1,28 @@
+import React, { useEffect } from "react"
+
+type ThemeProviderProps = {
+  children: React.ReactNode
+}
+
+export function ThemeProvider({
+  children,
+}: ThemeProviderProps) {
+  useEffect(() => {
+    const root = document.documentElement
+
+    root.classList.remove("dark")
+    root.classList.add("light")
+    root.style.colorScheme = "light"
+
+    localStorage.removeItem("vite-ui-theme")
+  }, [])
+
+  return <>{children}</>
+}
+
+export function useTheme() {
+  return {
+    theme: "light" as const,
+    setTheme: (_theme: "light" | "dark" | "system") => {},
+  }
+}

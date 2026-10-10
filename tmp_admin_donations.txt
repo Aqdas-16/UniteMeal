@@ -1,0 +1,88 @@
+export function AdminDonationMonitoringContent() {
+   const [donations, setDonations] = useState<any[]>([]);
+   const [searchQuery, setSearchQuery] = useState('');
+   const [filterStatus, setFilterStatus] = useState('all');
+
+   useEffect(() => {
+     const fetchDonations = async () => {
+        const { data } = await supabase.from('donations').select('*').order('created_at', { ascending: false });
+        if (data) setDonations(data);
+     };
+
+     fetchDonations();
+
+     const channel = supabase.channel('admin-donations-mon').on('postgres_changes', { event: '*', schema: 'public', table: 'donations' }, () => fetchDonations()).subscribe();
+       
+     return () => { supabase.removeChannel(channel); };
+   }, []);
+
+   const filtered = donations.filter(d => {
+      if (filterStatus !== 'all' && d.status !== filterStatus) return false;
+      if (searchQuery) {
+         const search = searchQuery.toLowerCase();
+         if (!d.id.toLowerCase().includes(search) && !d.title?.toLowerCase().includes(search) && !d.organization_name?.toLowerCase().includes(search)) return false;
+      }
+      return true;
+   });
+
+   return (
+      <div className="space-y-6 max-w-6xl mx-auto">
+         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+            <h2 className="text-2xl font-bold tracking-tight">Live Tracking</h2>
+            <div className="flex items-center gap-2">
+               <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-theme-text-secondary" />
+                  <input type="text" placeholder="Search ID, Food, Contributor..." className="pl-9 pr-4 py-2 text-sm border rounded-md" value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} />
+               </div>
+               <select className="border rounded-md px-3 py-2 text-sm" value={filterStatus} onChange={e=>setFilterStatus(e.target.value)}>
+                  <option value="all">All Statuses</option>
+                  <option value="pending">Pending</option>
+                  <option value="accepted">Accepted</option>
+                  <option value="assigned">Assigned</option>
+                  <option value="in_transit">In Transit</option>
+                  <option value="delivered">Delivered</option>
+                  <option value="cancelled">Cancelled</option>
+               </select>
+            </div>
+         </div>
+
+         <Card className="shadow-sm">
+            <CardContent className="p-0 overflow-x-auto">
+               <Table>
+                  <TableHeader className="bg-slate-50 border-b">
+                     <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Food Contributor</TableHead>
+                        <TableHead>Food Type</TableHead>
+                        <TableHead>Qty</TableHead>
+                        <TableHead>Pickup</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Created</TableHead>
+                     </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                     {filtered.map(d => (
+                        <TableRow key={d.id}>
+                           <TableCell className="font-mono text-xs max-w-[100px] truncate">{d.id}</TableCell>
+                           <TableCell className="font-medium">{d.organization_name || 'N/A'}</TableCell>
+                           <TableCell>{d.title}</TableCell>
+                           <TableCell>{d.quantity_kg}kg</TableCell>
+                           <TableCell className="max-w-[150px] truncate">{d.pickup_address}</TableCell>
+                           <TableCell>
+                              <Badge variant="outline" className="uppercase text-[10px]">{d.status}</Badge>
+                           </TableCell>
+                           <TableCell className="text-xs text-theme-text-secondary whitespace-nowrap">
+                              {d.created_at ? new Date(d.created_at).toLocaleString() : 'N/A'}
+                           </TableCell>
+                        </TableRow>
+                     ))}
+                     {filtered.length === 0 && <TableRow><TableCell colSpan={7} className="text-center py-8 text-theme-text-secondary">No contributions match filters.</TableCell></TableRow>}
+                  </TableBody>
+               </Table>
+            </CardContent>
+         </Card>
+      </div>
+   )
+}
+
+export function AdminAnalyticsContent() {

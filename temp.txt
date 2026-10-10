@@ -1,0 +1,531 @@
+export function CreateDonationContent() {
+  const { user, profile } = useAuth();
+  const navigate = useNavigate();
+  const [step, setStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [aiAnalyzing, setAiAnalyzing] = useState(false);
+  const [aiAssessment, setAiAssessment] = useState<any>(null);
+  const [authenticityInfo, setAuthenticityInfo] = useState<any>(null);
+  const [formData, setFormData] = useState({
+    title: '', category: 'cooked_food', quantity_kg: '', unit: 'kg', estimated_meals: '',
+    is_veg: 'Veg', packaging: 'Sealed Containers', 
+    address: '', pin_lat: 19.0760, pin_lng: 72.8777, instructions: '',
+    image1: null as any,
+  });
+
+  useEffect(() => {
+    if (user) {
+        const loadDonorProfile = async () => {
+            const { data } = await supabase.from('donors').select('address, location_lat, location_lng').eq('id', user.uid).maybeSingle();
+            if (data && data.address) {
+                setFormData(prev => ({
+                    ...prev,
+                    address: data.address,
+                    pin_lat: data.location_lat || prev.pin_lat,
+                    pin_lng: data.location_lng || prev.pin_lng
+                }));
+            }
+        };
+        loadDonorProfile();
+    }
+  }, [user]);
+
+  const handleChange = (e: any) => {
+    setFormData({ ...formData, [e.target.id]: e.target.value });
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+          toast.error("Invalid file type. Please upload JPG, PNG, or WEBP.");
+          return;
+      }
+      
+      if (file.size > 10 * 1024 * 1024) {
+          toast.error("File is too large. Maximum size is 10MB.");
+          return;
+      }
+      
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+
+      // Run AI Analysis
+      setAiAnalyzing(true);
+      setAiAssessment(null);
+      try {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onloadend = async () => {
+              const base64data = reader.result as string;
+              // Remove data url prefix for API call
+              const base64 = base64data.split(',')[1];
+              
+              const response = await fetch('/api/ai/vision-verify', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ imageBase64: base64, mimeType: file.type })
+              });
+              
+              if (response.ok) {
+                  const data = await response.json();
+                  setAiAssessment(data.result);
+                  setAuthenticityInfo(data.authenticity);
+              } else {
+                  const errorData = await response.json().catch(() => null);
+                  const errorMessage = errorData?.error || "Failed to analyze image with AI.";
+                  toast.error(errorMessage);
+                  // Remove image if authenticity fails
+                  removeImage();
+              }
+              setAiAnalyzing(false);
+          };
+      } catch (err) {
+          console.error("Error analyzing image:", err);
+          toast.error("Failed to analyze image with AI.");
+          setAiAnalyzing(false);
+      }
+  };
+
+  const removeImage = () => {
+      setImageFile(null);
+      setImagePreview(null);
+      setAiAssessment(null);
+      setAuthenticityInfo(null);
+      if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+      }
+  };
+
+  const handleCreate = async () => {
+    setIsSubmitting(true);
+    const qty = parseFloat(formData.quantity_kg) || 0;
+    
+    // Auto-calculate meals if not provided
+    let meals = parseInt(formData.estimated_meals);
+    if (isNaN(meals)) {
+        if (formData.unit === 'kg') meals = Math.round(qty * 4);
+        else meals = Math.round(qty);
+    }
+
+    try {
+        // Ensure donor record exists to prevent FK constraint errors
+        if (user) {
+            // Check if donor exists first to avoid overwriting profile fields
+            const { data: existingDonor } = await supabase.from('donors').select('id').eq('id', user.uid).maybeSingle();
+            if (!existingDonor) {
+                const { error: donorError } = await supabase.from('donors').insert({
+                    id: user.uid,
+                    donor_type: 'restaurant',
+                    organization_name: profile?.business_name || profile?.full_name || 'Unknown Restaurant',
+                    address: formData.address,
+                    location_lat: formData.pin_lat,
+                    location_lng: formData.pin_lng
+                });
+                if (donorError && donorError.code !== '23505') console.error("Donor init error:", donorError);
+            }
+        }
+
+        const donationData = {
+            title: formData.title,
+            food_category: formData.category,
+            quantity_kg: qty,
+            estimated_meals: meals,
+            donor_id: user?.uid || 'unknown',
+            status: 'available',
+            expiry_time: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+            pickup_address: formData.address || 'Unknown Address',
+            pickup_lat: formData.pin_lat,
+            pickup_lng: formData.pin_lng
+        };
+        
+        const { data: newDoc, error: insertError } = await supabase.from('donations').insert(donationData).select().single();
+        if (insertError) throw insertError;
+        
+        const newDocId = newDoc?.id;
+        
+        if (imageFile && newDocId) {
+            setUploadProgress(10);
+            const fileExt = imageFile.name.split('.').pop();
+            const fileName = `${newDocId}-${Date.now()}.${fileExt}`;
+            const filePath = `${user?.uid}/${fileName}`;
+
+            setUploadProgress(40);
+            const { error: uploadError } = await supabase.storage
+                .from('donation-images')
+                .upload(filePath, imageFile, {
+                    cacheControl: '3600',
+                    upsert: false
+                });
+
+            setUploadProgress(70);
+            if (uploadError) {
+                console.error("Upload error:", uploadError);
+                toast.error("Failed to upload food image.");
+            } else {
+                const { data: publicUrlData } = supabase.storage.from('donation-images').getPublicUrl(filePath);
+                
+                await supabase.from('donation_images').insert({
+                    donation_id: newDocId,
+                    image_url: publicUrlData.publicUrl,
+                    file_name: imageFile.name,
+                    file_size: imageFile.size,
+                    mime_type: imageFile.type
+                });
+                
+                if (aiAssessment) {
+                    await supabase.from('food_quality_assessments').insert({
+                        donation_id: newDocId,
+                        food_name: aiAssessment.foodName || '',
+                        food_category: aiAssessment.foodCategory || '',
+                        freshness_score: aiAssessment.freshnessScore || 0,
+                        spoilage_risk: aiAssessment.spoilageRisk || '',
+                        visible_mold: aiAssessment.visibleMold || false,
+                        estimated_age: aiAssessment.estimatedAge || '',
+                        recommended_donation_time: aiAssessment.recommendedDonationTime || '',
+                        safe_to_donate: aiAssessment.safeToDonate || '',
+                        confidence_score: aiAssessment.confidenceScore || 0,
+                        explanation: aiAssessment.explanation || '',
+                        authenticity_result: authenticityInfo?.result || '',
+                        authenticity_confidence: authenticityInfo?.confidence || 0
+                    });
+                }
+                setUploadProgress(100);
+            }
+        }
+        
+        if (user?.uid && newDocId) {
+            await supabase.from('notifications').insert({
+                receiver_user_id: user.uid,
+                sender_user_id: 'system',
+                type: 'Donation Updates',
+                title: 'Donation Created',
+                message: `Donation "${formData.title}" has been published.`,
+                is_read: false,
+                is_important: false,
+                priority: 'normal',
+                related_donation_id: newDocId,
+                action_url: '/dashboard/donor/active'
+            });
+        }
+        
+        toast.success("Donation created successfully!");
+        navigate('/dashboard/donor');
+    } catch (error: any) {
+        console.error("Error creating donation:", error);
+        toast.error(error.message || "An error occurred while creating the donation.");
+    } finally {
+        setIsSubmitting(false);
+        setUploadProgress(0);
+    }
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      
+      {/* HEADER & PROGRESS */}
+      <div className="bg-white dark:bg-[#111113] p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+         <h1 className="text-2xl font-black text-slate-900 dark:text-white mb-6">Create New Donation</h1>
+         <div className="flex items-center justify-between relative">
+             <div className="absolute left-0 top-1/2 w-full h-1 bg-slate-100 dark:bg-slate-800 -z-10 rounded-full" />
+             <div className="absolute left-0 top-1/2 h-1 bg-emerald-500 -z-10 rounded-full transition-all duration-500" style={{ width: `${(step - 1) * 33.33}%` }} />
+             
+             {[1,2,3,4].map(num => (
+                <div key={num} className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 ${step >= num ? 'bg-emerald-600 text-white shadow-md' : 'bg-white dark:bg-[#111113] text-slate-400 border-2 border-slate-200 dark:border-slate-700'}`}>
+                   {step > num ? <CheckCircle2 className="w-5 h-5" /> : num}
+                </div>
+             ))}
+         </div>
+         <div className="flex justify-between mt-3 text-xs font-bold text-slate-500 uppercase tracking-wider px-1">
+            <span>Food Details</span><span>Pickup Setup</span><span>Verification</span><span>Review</span>
+         </div>
+      </div>
+
+      {/* STEP CONTENTS */}
+      <AnimatePresence mode="wait">
+        <motion.div key={step} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
+            <Card className="shadow-sm border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111113] rounded-2xl overflow-hidden">
+                <CardContent className="p-8">
+                   
+                   {step === 1 && (
+                     <div className="space-y-6">
+                         <h2 className="text-xl font-bold">1. Food Details</h2>
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                             <div className="md:col-span-2">
+                                <Label className="text-sm font-bold text-slate-700 dark:text-slate-300">Food Name</Label>
+                                <Input id="title" value={formData.title} onChange={handleChange} placeholder="e.g. Mixed Rice and Curry" className="mt-2 h-12 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800" />
+                             </div>
+                             <div>
+                                <Label className="text-sm font-bold text-slate-700 dark:text-slate-300">Category</Label>
+                                <select id="category" value={formData.category} onChange={handleChange} className="mt-2 flex h-12 w-full rounded-md border border-slate-200 bg-slate-50 dark:bg-slate-900 dark:border-slate-800 px-3 py-2 text-sm">
+                                  <option value="cooked_food">Cooked Food / Prepared Meals</option>
+                                  <option value="produce">Raw Produce</option>
+                                  <option value="packaged_food">Packaged Goods</option>
+                                  <option value="baked_goods">Bakery</option>
+                                </select>
+                             </div>
+                             <div>
+                                <Label className="text-sm font-bold text-slate-700 dark:text-slate-300">Dietary Type</Label>
+                                <select id="is_veg" value={formData.is_veg} onChange={handleChange} className="mt-2 flex h-12 w-full rounded-md border border-slate-200 bg-slate-50 dark:bg-slate-900 dark:border-slate-800 px-3 py-2 text-sm">
+                                  <option>Vegetarian</option>
+                                  <option>Non-Vegetarian</option>
+                                  <option>Vegan</option>
+                                  <option>Mixed</option>
+                                </select>
+                             </div>
+                             <div className="grid grid-cols-2 gap-4">
+                                <div><Label className="text-sm font-bold text-slate-700 dark:text-slate-300">Quantity</Label><Input id="quantity_kg" type="number" value={formData.quantity_kg} onChange={handleChange} className="mt-2 h-12 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800" /></div>
+                                <div>
+                                  <Label className="text-sm font-bold text-slate-700 dark:text-slate-300">Unit</Label>
+                                  <select id="unit" value={formData.unit} onChange={handleChange} className="mt-2 flex h-12 w-full rounded-md border border-slate-200 bg-slate-50 dark:bg-slate-900 dark:border-slate-800 px-3 py-2 text-sm">
+                                    <option>kg</option><option>items</option><option>liters</option>
+                                  </select>
+                                </div>
+                             </div>
+                             <div>
+                                <Label className="text-sm font-bold text-slate-700 dark:text-slate-300">Estimated Meals (Optional)</Label>
+                                <Input id="estimated_meals" type="number" placeholder="Auto-calculated if blank" value={formData.estimated_meals} onChange={handleChange} className="mt-2 h-12 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800" />
+                             </div>
+                         </div>
+                     </div>
+                   )}
+
+                   {step === 2 && (
+                     <div className="space-y-6">
+                         <h2 className="text-xl font-bold">2. Pickup Information</h2>
+                         <div>
+                             <Label className="text-sm font-bold text-slate-700 dark:text-slate-300">Pickup Address</Label>
+                             {hasValidKey ? (
+                                 <APIProvider apiKey={API_KEY} version="weekly">
+                                     <AddressAutocompleteInput 
+                                        value={formData.address}
+                                        onChange={(val) => setFormData({ ...formData, address: val })}
+                                        onPlaceSelect={(place) => {
+                                            if (place.location) {
+                                                setFormData({
+                                                    ...formData,
+                                                    address: place.formattedAddress || '',
+                                                    pin_lat: place.location.lat(),
+                                                    pin_lng: place.location.lng()
+                                                });
+                                            }
+                                        }}
+                                        className="mt-2 h-12 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                                     />
+                                 </APIProvider>
+                             ) : (
+                                 <Input id="address" value={formData.address} onChange={handleChange} placeholder="Address (Map API Key missing)" className="mt-2 h-12 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800" />
+                             )}
+                         </div>
+                         <div className="h-64 w-full bg-slate-100 dark:bg-slate-900 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 relative flex items-center justify-center">
+                              {hasValidKey ? (
+                                  <APIProvider apiKey={API_KEY} version="weekly">
+                                      <GoogleMap
+                                          defaultCenter={{ lat: formData.pin_lat, lng: formData.pin_lng }}
+                                          center={{ lat: formData.pin_lat, lng: formData.pin_lng }}
+                                          defaultZoom={15}
+                                          mapId="CREATE_DONATION_MAP"
+                                          internalUsageAttributionIds={['gmp_mcp_codeassist_v1_aistudio']}
+                                          style={{ width: '100%', height: '100%' }}
+                                          disableDefaultUI={true}
+                                      >
+                                          <AdvancedMarker position={{ lat: formData.pin_lat, lng: formData.pin_lng }}>
+                                              <Pin background="#10b981" glyphColor="#fff" borderColor="#047857" />
+                                          </AdvancedMarker>
+                                      </GoogleMap>
+                                  </APIProvider>
+                              ) : (
+                                  <>
+                                      <MapPin className="w-10 h-10 text-emerald-600 mb-6 absolute z-20" />
+                                      <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&q=80&w=800" alt="Map Preview" className="w-full h-full object-cover opacity-60 z-10" />
+                                      <div className="absolute inset-0 z-10 bg-gradient-to-t from-slate-900/60 to-transparent flex items-end p-4">
+                                          <Button size="sm" variant="secondary" className="font-bold shadow-sm text-xs">Configure Maps API Key to unlock interactive map</Button>
+                                      </div>
+                                  </>
+                              )}
+                         </div>
+                         <div>
+                             <Label className="text-sm font-bold text-slate-700 dark:text-slate-300">Pickup Instructions</Label>
+                             <Input id="instructions" value={formData.instructions} onChange={handleChange} placeholder="e.g. Call upon arrival, rear door entrance." className="mt-2 h-12 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800" />
+                         </div>
+                     </div>
+                   )}
+
+                   {step === 3 && (
+                     <div className="space-y-6">
+                         <h2 className="text-xl font-bold">3. Quality Verification</h2>
+                         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 p-4 rounded-xl flex gap-3 text-amber-800 dark:text-amber-500">
+                             <AlertTriangle className="w-5 h-5 shrink-0" />
+                             <div>
+                                 <p className="font-bold text-sm">Visual Verification Required</p>
+                                 <p className="text-xs mt-1">Upload a photo of the food. Our AI engine verifies visual freshness to ensure compliance.</p>
+                             </div>
+                         </div>
+                         <input type="file" ref={fileInputRef} className="hidden" accept="image/jpeg,image/png,image/webp,image/jpg" onChange={handleFileChange} />
+                         {!imagePreview ? (
+                             <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl h-48 flex flex-col items-center justify-center text-slate-500 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors cursor-pointer">
+                                 <Box className="w-8 h-8 mb-2" />
+                                 <p className="font-bold">Click to Upload Food Image</p>
+                                 <p className="text-xs mt-1">JPG, JPEG, PNG, WEBP up to 10MB</p>
+                             </div>
+                         ) : (
+                             <div className="relative rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex justify-center items-center">
+                                 <img src={imagePreview} alt="Food Preview" className="h-48 object-cover" />
+                                 <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                                     <Button type="button" variant="secondary" size="sm" onClick={() => fileInputRef.current?.click()}>
+                                         Replace
+                                     </Button>
+                                     <Button type="button" variant="destructive" size="sm" onClick={removeImage}>
+                                         Remove
+                                     </Button>
+                                 </div>
+                             </div>
+                         )}
+                         {aiAnalyzing && (
+                             <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl space-y-3">
+                                 <div className="flex justify-between text-xs font-bold"><span className="text-blue-500 animate-pulse">AI Scanning Image...</span><span>Processing</span></div>
+                                 <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                                    <div className="bg-blue-500 h-1.5 rounded-full w-full animate-[progress_2s_ease-in-out_infinite]" style={{ transformOrigin: 'left' }}></div>
+                                 </div>
+                             </div>
+                         )}
+
+                         {aiAssessment && !aiAnalyzing && (
+                             <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 space-y-4">
+                                <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
+                                    <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                                    <h3 className="font-bold text-slate-900 dark:text-white">AI Quality Report</h3>
+                                    <Badge className="ml-auto bg-blue-100 text-blue-800 border-0">{aiAssessment.confidenceScore}% Confidence</Badge>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                    <div>
+                                        <p className="text-xs text-slate-500 uppercase font-bold mb-1">Detected Food</p>
+                                        <p className="font-medium text-slate-800 dark:text-slate-200">{aiAssessment.foodName} ({aiAssessment.foodCategory})</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-slate-500 uppercase font-bold mb-1">Safety Status</p>
+                                        <Badge className={
+                                            aiAssessment.safeToDonate === 'Yes' ? 'bg-emerald-100 text-emerald-800' :
+                                            aiAssessment.safeToDonate === 'No' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'
+                                        }>{aiAssessment.safeToDonate}</Badge>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-slate-500 uppercase font-bold mb-1">Freshness Score</p>
+                                        <div className="flex items-center gap-2">
+                                            <div className="flex-1 bg-slate-200 dark:bg-slate-800 rounded-full h-2">
+                                                <div className={`h-2 rounded-full ${aiAssessment.freshnessScore > 75 ? 'bg-emerald-500' : aiAssessment.freshnessScore > 40 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${aiAssessment.freshnessScore}%` }}></div>
+                                            </div>
+                                            <span className="font-bold">{aiAssessment.freshnessScore}/100</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-slate-500 uppercase font-bold mb-1">Spoilage Risk</p>
+                                        <p className="font-medium text-slate-800 dark:text-slate-200">{aiAssessment.spoilageRisk} {aiAssessment.visibleMold && '(Mold Detected)'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-slate-500 uppercase font-bold mb-1">Est. Age</p>
+                                        <p className="font-medium text-slate-800 dark:text-slate-200">{aiAssessment.estimatedAge}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-slate-500 uppercase font-bold mb-1">Time Remaining</p>
+                                        <p className="font-medium text-slate-800 dark:text-slate-200">{aiAssessment.recommendedDonationTime}</p>
+                                    </div>
+                                    {authenticityInfo && (
+                                        <div className="col-span-2 mt-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+                                            <p className="text-xs text-slate-500 uppercase font-bold mb-1">Authenticity Verification</p>
+                                            <p className="font-medium text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                                                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                                                {authenticityInfo.result} 
+                                                <span className="text-slate-500 font-normal text-xs">({(authenticityInfo.confidence * 100).toFixed(0)}% confident)</span>
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="pt-3 border-t border-slate-200 dark:border-slate-800">
+                                    <p className="text-xs text-slate-600 dark:text-slate-400 italic">"{aiAssessment.explanation}"</p>
+                                </div>
+                             </div>
+                         )}
+                     </div>
+                   )}
+
+                   {step === 4 && (
+                     <div className="space-y-6">
+                         <h2 className="text-xl font-bold">4. Final Review</h2>
+                         <div className="bg-slate-50 dark:bg-slate-900/50 p-6 rounded-xl border border-slate-200 dark:border-slate-800 space-y-4">
+                             
+                             <div className="flex justify-between items-start border-b border-slate-200 dark:border-slate-800 pb-4">
+                                <div>
+                                    <h3 className="font-bold text-lg text-slate-900 dark:text-white">{formData.title || 'Untitled Donation'}</h3>
+                                    <p className="text-sm text-slate-500 font-medium">{formData.quantity_kg} {formData.unit} • {formData.category}</p>
+                                </div>
+                                <Badge className="bg-emerald-100 text-emerald-800 border-0">{formData.is_veg}</Badge>
+                             </div>
+
+                             <div className="grid grid-cols-2 gap-y-4 text-sm pt-2">
+                                <div><span className="text-xs font-bold text-slate-400 block uppercase tracking-wider mb-1">Pick Up At</span><span className="font-medium text-slate-800 dark:text-slate-200">{formData.address || 'Address not provided'}</span></div>
+                                <div><span className="text-xs font-bold text-slate-400 block uppercase tracking-wider mb-1">Estimated Meals</span><span className="font-medium text-slate-800 dark:text-slate-200">{formData.estimated_meals || Math.round((parseFloat(formData.quantity_kg) || 0) * 4)} meals</span></div>
+                             </div>
+
+                             {/* AI Pre-Calculation */}
+                             <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
+                                 <div className="flex items-center gap-2 mb-3">
+                                     <Zap className="w-4 h-4 text-amber-500" />
+                                     <span className="font-bold text-sm text-slate-900 dark:text-white">AI Quick Forecast</span>
+                                 </div>
+                                 <div className="grid grid-cols-3 gap-3">
+                                     <div className="bg-white dark:bg-[#111113] p-3 border border-slate-200 dark:border-slate-800 rounded-lg text-center">
+                                         <p className="font-black text-emerald-600">92%</p>
+                                         <p className="text-[10px] font-bold text-slate-500 uppercase">Match Prob.</p>
+                                     </div>
+                                     <div className="bg-white dark:bg-[#111113] p-3 border border-slate-200 dark:border-slate-800 rounded-lg text-center">
+                                         <p className="font-black text-slate-900 dark:text-white">15m</p>
+                                         <p className="text-[10px] font-bold text-slate-500 uppercase">Est. Pickup</p>
+                                     </div>
+                                     <div className="bg-white dark:bg-[#111113] p-3 border border-slate-200 dark:border-slate-800 rounded-lg text-center">
+                                         <p className="font-black text-blue-600">High</p>
+                                         <p className="text-[10px] font-bold text-slate-500 uppercase">Demand</p>
+                                     </div>
+                                 </div>
+                             </div>
+
+                         </div>
+                     </div>
+                   )}
+
+                </CardContent>
+            </Card>
+        </motion.div>
+      </AnimatePresence>
+
+      {/* FOOTER ACTIONS */}
+      <div className="flex justify-between items-center pt-2">
+         {step > 1 ? (
+             <Button variant="outline" className="h-12 w-32 rounded-xl font-bold shadow-sm" onClick={() => setStep(step - 1)}>Back</Button>
+         ) : <div />}
+
+         {step < 4 ? (
+             <Button className="h-12 px-8 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:opacity-90 font-bold shadow-md" onClick={() => setStep(step + 1)} disabled={aiAnalyzing}>Continue &rarr;</Button>
+         ) : (
+             <Button className="h-12 px-8 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-md" onClick={handleCreate} disabled={isSubmitting}>
+                 {isSubmitting ? (uploadProgress > 0 && uploadProgress < 100 ? `Uploading Image (${uploadProgress}%)` : 'Publishing...') : 'Publish Donation & Match'}
+             </Button>
+         )}
+      </div>
+
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 2. MY DONATIONS (CARDS INSTEAD OF TABLES)
+// ---------------------------------------------------------------------------
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+
+export function DonationHistoryContent() {

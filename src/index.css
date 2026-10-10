@@ -1,0 +1,551 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-heading: "Inter", sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --color-theme-bg: var(--bg);
+  --color-theme-surface: var(--surface);
+  --color-theme-surface-2: var(--surface-2);
+  --color-theme-text: var(--text);
+  --color-theme-text-secondary: var(--text-secondary);
+  --color-theme-border: var(--border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+  --animate-marquee: marquee 60s linear infinite;
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@layer base {
+  :root {
+    /* UniteMeal Brand Colors */
+    --bg: #F8F9F6;
+    --surface: #FFFFFF;
+    --surface-2: #EEF3EC;
+
+    --text: #292722;
+    --text-secondary: #686F68;
+    --border: #E1E7DF;
+
+    /* shadcn / Tailwind Theme */
+    --background: #F8F9F6;
+    --foreground: #292722;
+
+    --card: #FFFFFF;
+    --card-foreground: #292722;
+
+    --popover: #FFFFFF;
+    --popover-foreground: #292722;
+
+    /* Primary: Forest Green */
+    --primary: #245C43;
+    --primary-foreground: #FFFFFF;
+
+    /* Secondary */
+    --secondary: #EEF3EC;
+    --secondary-foreground: #245C43;
+
+    /* Supporting Colors */
+    --muted: #F0F2EE;
+    --muted-foreground: #686F68;
+
+    --accent: #E5EEE5;
+    --accent-foreground: #245C43;
+
+    --destructive: #B93838;
+
+    --input: #D9E1D7;
+    --ring: #245C43;
+
+    /* Role-Specific Accents */
+    --role-restaurant: #245C43;
+    --role-ngo: #A45B25;
+    --role-volunteer: #315F91;
+    --role-admin: #65508F;
+
+    /* Charts */
+    --chart-1: #245C43;
+    --chart-2: #E58A45;
+    --chart-3: #668C72;
+    --chart-4: #D5A66B;
+    --chart-5: #7A8C69;
+
+    /* Layout */
+    --radius: 0.75rem;
+
+    /* Sidebar */
+    --sidebar: #FFFFFF;
+    --sidebar-foreground: #292722;
+    --sidebar-primary: #245C43;
+    --sidebar-primary-foreground: #FFFFFF;
+    --sidebar-accent: #EEF3EC;
+    --sidebar-accent-foreground: #245C43;
+    --sidebar-border: #E1E7DF;
+    --sidebar-ring: #245C43;
+  }
+
+  ``` .dark {
+    /* ========================================
+       UNITEMEAL — DARK THEME
+    ======================================== */
+
+    --bg: #171B17;
+    --surface: #202720;
+    --surface-2: #2B342C;
+
+    --text: #F5F0E8;
+    --text-secondary: #B8BDB3;
+    --border: #394339;
+
+    /* Shadcn / Tailwind */
+    --background: #171B17;
+    --foreground: #F5F0E8;
+
+    --card: #202720;
+    --card-foreground: #F5F0E8;
+
+    --popover: #202720;
+    --popover-foreground: #F5F0E8;
+
+    --primary: #83B596;
+    --primary-foreground: #142219;
+
+    --secondary: #2B342C;
+    --secondary-foreground: #D8E8DB;
+
+    --muted: #2B342C;
+    --muted-foreground: #B8BDB3;
+
+    --accent: #3D3024;
+    --accent-foreground: #F0B77E;
+
+    --destructive: #F07878;
+
+    --border: #394339;
+    --input: #465146;
+    --ring: #83B596;
+
+    /* Charts */
+    --chart-1: #83B596;
+    --chart-2: #F0A467;
+    --chart-3: #91B4D3;
+    --chart-4: #D5BD7D;
+    --chart-5: #B5A1D8;
+
+    /* Sidebar */
+    --sidebar: #202720;
+    --sidebar-foreground: #F5F0E8;
+    --sidebar-primary: #83B596;
+    --sidebar-primary-foreground: #142219;
+    --sidebar-accent: #2B342C;
+    --sidebar-accent-foreground: #F5F0E8;
+    --sidebar-border: #394339;
+    --sidebar-ring: #83B596;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    overflow-x: hidden;
+  }
+
+  html {
+    @apply font-sans;
+    font-size: 16px;
+  }
+
+  @media (max-width: 1024px) {
+    html {
+      font-size: 15px;
+    }
+  }
+
+  @media (max-width: 767px) {
+    html {
+      font-size: 14px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    html {
+      font-size: 13px;
+    }
+  }
+
+  img,
+  video,
+  .dark-mode-image-bg {
+    transition: filter 0.5s ease;
+  }
+
+  .dark img,
+  .dark video,
+  .dark .dark-mode-image-bg {
+    filter: brightness(0.72) contrast(0.94) saturate(0.88);
+  }
+}
+
+
+@layer components {
+
+  /* Enhance standard cards across all roles */
+  .card,
+  [class*="Card_"],
+  [class^="Card"],
+  .shadow-sm {
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+
+  .card:hover,
+  [class*="Card_"]:hover,
+  [class^="Card"]:not(.no-hover):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.05), 0 4px 12px -2px rgba(0, 0, 0, 0.03) !important;
+    border-color: rgba(var(--color-ring) / 0.1) !important;
+  }
+
+  .dark .card:hover,
+  .dark [class*="Card_"]:hover,
+  .dark [class^="Card"]:not(.no-hover):hover {
+    box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.3), 0 4px 12px -2px rgba(0, 0, 0, 0.2) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+  }
+
+  /* Modern Button Enhancements */
+  button {
+    transition: all 0.2s ease;
+  }
+
+  button:active {
+    transform: scale(0.97) !important;
+  }
+
+  .premium-section-bg {
+    position: relative;
+    border-radius: 32px;
+    background: radial-gradient(circle at center, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.85) 65%, rgba(252, 252, 250, 0.45) 100%);
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
+    z-index: 1;
+    border: none;
+  }
+
+  .premium-section-bg::before {
+    content: "";
+    position: absolute;
+    inset: -12px;
+    border-radius: 44px;
+    background: radial-gradient(circle at center, rgba(255, 255, 255, 0.8) 40%, transparent 100%);
+    filter: blur(12px);
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  .dark .premium-section-bg {
+    background: #171F2B;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 28px;
+  }
+
+  .dark .premium-section-bg::before {
+    display: none;
+  }
+
+  .premium-card {
+    background: var(--surface);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  }
+
+  .dark .premium-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  }
+
+  .premium-card-hover {
+    transition: all 0.3s ease;
+  }
+
+  .premium-card-hover:hover {
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+    background: var(--surface-2);
+  }
+
+  .dark .premium-card-hover:hover {
+    background: var(--surface-2);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+  }
+
+  .premium-cta-bg {
+    position: relative;
+    border-radius: 32px;
+    background: linear-gradient(135deg, #FFFDF8 0%, #F7FDF6 35%, #F6FBFF 70%, #FFF8F3 100%);
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
+    z-index: 1;
+    border: none;
+  }
+
+  .premium-cta-bg::before {
+    content: "";
+    position: absolute;
+    inset: -12px;
+    border-radius: 44px;
+    background: radial-gradient(circle at center, rgba(255, 255, 255, 0.8) 40%, transparent 100%);
+    filter: blur(12px);
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  .dark .premium-cta-bg {
+    background: radial-gradient(circle at top, rgba(255, 255, 255, 0.03), transparent 70%), linear-gradient(180deg, #171F2B, #121923);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 28px;
+  }
+
+  .dark .premium-cta-bg::before {
+    display: none;
+  }
+}
+
+/* Hide Google Maps Error Popups and Overlays */
+.gm-err-container {
+  display: none !important;
+}
+
+.gm-err-content {
+  display: none !important;
+}
+
+.gm-err-title {
+  display: none !important;
+}
+
+.gm-err-message {
+  display: none !important;
+}
+
+.dismissButton {
+  display: none !important;
+}
+
+/* Custom Scrollbar for Modal and Timeline */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.3);
+  border-radius: 20px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(148, 163, 184, 0.5);
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(71, 85, 105, 0.5);
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(71, 85, 105, 0.7);
+}
+
+.animation-slide-up {
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+
+/* Table Responsive Stacking Cards for Mobile */
+@media (max-width: 767px) {
+  .w-full.overflow-x-auto table.min-w-\[700px\] {
+    min-width: 100% !important;
+  }
+
+  .w-full.overflow-x-auto table,
+  .w-full.overflow-x-auto thead,
+  .w-full.overflow-x-auto tbody,
+  .w-full.overflow-x-auto th,
+  .w-full.overflow-x-auto td,
+  .w-full.overflow-x-auto tr {
+    display: block;
+  }
+
+  .w-full.overflow-x-auto thead tr {
+    position: absolute;
+    top: -9999px;
+    left: -9999px;
+  }
+
+  .w-full.overflow-x-auto tr {
+    border: 1px solid var(--color-border);
+    border-radius: 0.75rem;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background-color: var(--color-theme-surface);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .w-full.overflow-x-auto td {
+    border: none !important;
+    position: relative;
+    padding: 0 !important;
+    text-align: left !important;
+    display: flex !important;
+    flex-direction: column;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+  }
+
+  .w-full.overflow-x-auto td.text-right {
+    flex-direction: row;
+    justify-content: flex-end !important;
+    margin-top: 0.5rem;
+  }
+}
+
+
+/* ========================================
+   UNITEMEAL — ROLE ACCENTS
+======================================== */
+
+.role-restaurant {
+  --role-accent: var(--role-restaurant);
+  --role-accent-soft: #E5E9DF;
+}
+
+.role-ngo {
+  --role-accent: var(--role-ngo);
+  --role-accent-soft: #EAF0E8;
+}
+
+.role-volunteer {
+  --role-accent: var(--role-volunteer);
+  --role-accent-soft: #E8EFF6;
+}
+
+.role-admin {
+  --role-accent: var(--role-admin);
+  --role-accent-soft: #EEEAF6;
+}
+
+/* Reusable role accent elements */
+.role-accent-text {
+  color: var(--role-accent);
+}
+
+.role-accent-bg {
+  background-color: var(--role-accent);
+  color: #FFFFFF;
+}
+
+.role-accent-soft {
+  background-color: var(--role-accent-soft);
+  color: var(--role-accent);
+}
+
+/* UniteMeal - Infinite Marquee Animation */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 32s linear infinite;
+  will-change: transform;
+}
+
+/* Pause when the user hovers over the strip */
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* Accessibility: respect reduced-motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee {
+    animation: none;
+  }
+}

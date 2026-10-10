@@ -1,0 +1,6 @@
+{
+  "name": "UniteMeal",
+  "description": "Reducing food waste and connecting surplus food with communities in need.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">UniteMeal</string>
+    <string name="title_activity_main">UniteMeal</string>
+    <string name="package_name">com.unitemeal.app</string>
+    <string name="custom_url_scheme">com.unitemeal.app</string>
+</resources>
