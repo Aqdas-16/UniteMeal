@@ -16,6 +16,7 @@ import {
   Clock,
   MapPin,
   Star,
+  PackageCheck,
 } from 'lucide-react';
 import { format, isValid } from 'date-fns';
 import {
