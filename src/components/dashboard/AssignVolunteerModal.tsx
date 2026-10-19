@@ -32,7 +32,7 @@ export function AssignVolunteerModal({ isOpen, onClose, donation, ngoId, onAssig
             const formatted = data.map(v => ({
                 id: v.id,
                 name: v.profiles?.full_name || 'Volunteer',
-                phone: v.profiles?.phone || 'No phone',
+                phone: v.profiles?.phone || v.profiles?.phone_number || '',
                 profile_photo: v.profiles?.avatar_url
             }));
             setVolunteers(formatted);

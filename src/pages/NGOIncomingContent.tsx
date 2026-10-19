@@ -288,15 +288,15 @@ export function NGOIncomingContent() {
                           </div>
 
                           <div className="min-w-0 flex-1">
-                            <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                            <div className="mb-2 flex  min-w-0 flex-wrap items-center gap-2">
                               <Badge className="rounded-md bg-[#EAF4EC] text-[10px] font-semibold text-[#176B4D] hover:bg-[#EAF4EC] dark:bg-emerald-950 dark:text-emerald-300">
                                 Available
                               </Badge>
-                              {donation.food_category && (
-                                <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                              {/* {donation.food_category && (
+                                <span className="min-w-0 text-[11px] font-medium text-slate-500 dark:text-slate-400">
                                   {donation.food_category}
                                 </span>
-                              )}
+                              )} */}
                             </div>
                             <h3 className="line-clamp-2 text-sm font-bold leading-5 text-slate-950 group-hover:text-[#176B4D] dark:text-white dark:group-hover:text-emerald-400 sm:text-base">
                               {donation.title || donation.food_name || donation.food_category || 'Food donation'}
@@ -317,21 +317,21 @@ export function NGOIncomingContent() {
 
                         <div className="flex flex-wrap items-center gap-x-5 gap-y-2.5 xl:items-start xl:justify-start xl:pt-0.5 2xl:flex-col 2xl:gap-3">
                           <div>
-                            <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            <p className="mt-5 text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
                               Quantity
                             </p>
-                            <p className="mt-0.5 text-sm font-bold text-slate-900 dark:text-white">
+                            <p className="mt-3 text-sm font-bold text-slate-900 dark:text-white">
                               {donation.quantity_kg != null ? `${donation.quantity_kg} kg` : 'Not specified'}
                             </p>
                           </div>
                           <div>
-                            <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            {/* <p className="mt-3 text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
                               Estimated meals
-                            </p>
-                            <p className="mt-0.5 flex items-center gap-1.5 text-sm font-bold text-slate-900 dark:text-white">
+                            </p> */}
+                            {/* <p className="mt-3 flex items-center gap-1.5 text-sm font-bold text-slate-900 dark:text-white">
                               <Utensils className="h-3.5 w-3.5 text-[#176B4D]" />
                               {donation.estimated_meals ?? '—'}
-                            </p>
+                            </p> */}
                           </div>
                         </div>
 
@@ -349,14 +349,14 @@ export function NGOIncomingContent() {
                                 : 'Expiry not specified'}
                             </span>
                           </div>
-                          <div className="flex items-center justify-between gap-3">
+                          <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
                             <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
                               {donation.distance != null
                                 ? `${donation.distance.toFixed(1)} km away`
                                 : 'Distance unavailable'}
                             </span>
                             <Button
-                              className="h-9 shrink-0 rounded-lg bg-[#176B4D] px-4 text-xs font-semibold text-white hover:bg-[#12563E]"
+                              className="h-9 max-w-full shrink rounded-lg bg-[#176B4D] px-3 text-xs font-semibold text-white hover:bg-[#12563E] sm:shrink-0 sm:px-4"
                               onClick={(event) => {
                                 event.stopPropagation();
                                 openAcceptFlow(donation);
