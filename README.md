@@ -1,4 +1,4 @@
-<UniteMeal – Food Donation and Rescue Platform
+UniteMeal – 
 
 Live Website: https://unitemeal.vercel.app/
 
